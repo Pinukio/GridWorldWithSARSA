@@ -84,23 +84,29 @@ class GridWorld(): # MC Control과 동일
 class QAgent():
     def __init__(self):
         self.q_table = np.zeros((7, 5, 4))
-        self.eps = 0.9 # epsilon, decaying이므로 처음엔 큰 수를 넣음
-        
-    def select_action(self, state): # decaying epsilon-greedy에 따라 Action을 결정함
+        # epsilon, decaying이므로 처음엔 큰 수를 넣음
+        self.eps = 0.9 
+
+    # decaying epsilon-greedy에 따라 Action을 결정함
+    def select_action(self, state): 
         x, y = state
         coin = random.random()
-        if coin < self.eps: # 랜덤 Action을 선택하는 경우
+        # 랜덤 Action을 선택하는 경우
+        if coin < self.eps: 
             action = random.randint(0, 3)
         else:
-            action_val = self.q_table[x, y, :] # 현 State의 Action Value를 모두 불러옴
-            action = np.argmax(action_val) # Action Value 중 가장 높은 것을 선택
+            # 현 State의 Action Value를 모두 불러옴
+            action_val = self.q_table[x, y, :]
+            # Action Value 중 가장 높은 것을 선택
+            action = np.argmax(action_val)
         return action
     
     def update_table(self, transition):
         state, action, reward, state_prime = transition
         x, y = state
         x_prime, y_prime = state_prime
-        action_prime = self.select_action(state_prime) # s'에서 선택할 Action, 현재 State에서 선택한 게 아님.
+         # s'에서 선택할 Action, 현재 State에서 선택한 게 아님.
+        action_prime = self.select_action(state_prime)
         # SARSA 업데이트 식을 이용함
         self.q_table[x, y, action] = self.q_table[x, y, action] + 0.1 * (reward + self.q_table[x_prime, y_prime, action_prime]-self.q_table[x, y, action])
 
@@ -117,4 +123,24 @@ class QAgent():
                 col = row[col_idx] # 각 State의 Action 4개
                 action = np.argmax(col)
                 data[row_idx, col_idx] = action
-        print(data)
+        print(data.T)
+
+def main():
+    env = GridWorld()
+    agent = QAgent()
+
+    for n_epi in range(1000): # 1000번의 Episode 진행
+        done = False
+
+        env.reset()
+        state = env.get_state()
+        while not done:
+            action = agent.select_action(state)
+            state_prime, reward, done = env.step(action)
+            agent.update_table((state, action, reward, state_prime))
+            state = state_prime
+        agent.anneal_eps()
+
+    agent.show_table()
+
+main()
